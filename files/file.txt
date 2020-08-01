@@ -1,0 +1,4 @@
+Add authorized_keys.username.pub file for each user here. For example
+for user 
+sam.smith
+authorized_keys.sam.smith.pub
