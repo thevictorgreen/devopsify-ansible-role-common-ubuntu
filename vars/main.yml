@@ -1,0 +1,18 @@
+---
+# vars file for common
+
+# SYSTEM AUTOMATION USERS HERE
+devops_users:
+  - username: cloudadmin
+
+# ADMINISTRATIVE USERS
+#sudo_users:
+#  - username: sudo.sample.user
+
+# REGULAR USERS HERE
+#users:
+#  - username: sample.user
+
+# REMOVED USERS HERE
+#removed_users:
+#  - username: sample.user
