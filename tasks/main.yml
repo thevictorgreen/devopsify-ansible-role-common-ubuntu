@@ -1,0 +1,124 @@
+---
+# tasks file for Common
+- name: Create Onecloud automation directory
+  become: yes
+  file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - '/root/.onecloud_automate'
+
+- name: Upload Onecloud initialization script
+  become: yes
+  copy:
+    src: common_init.sh
+    dest: /root/.onecloud_automate/common_init.sh
+
+- name: Upload hosts file
+  become: yes
+  copy:
+    src: hosts
+    dest: /root/.onecloud_automate/hosts
+
+- name: Change permissions on common_init.sh
+  become: yes
+  file:
+    path: /root/.onecloud_automate/common_init.sh
+    mode: "u+rwx"
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Run Onecloud Initialization script
+  become: yes
+  command: /root/.onecloud_automate/common_init.sh
+  args:
+    executable: /bin/bash
+
+- name: Make sure we have a 'wheel' group
+  become: yes
+  group:
+    name: wheel
+    state: present
+
+- name: Allow 'wheel' group to have passwordless sudo
+  become: yes
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%wheel'
+    line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+    validate: visudo -cf %s
+
+- name: Add devops_users
+  become: yes
+  user:
+    name: "{{ item.username }}"
+    shell: /bin/bash
+  with_items: "{{ devops_users }}"
+
+# CREATE THIS BLOCK FOR EACH DEVOPS USER
+- name: Add Authorized Keys into each devops_user
+  become: yes
+  authorized_key:
+    user: cloudadmin
+    state: present
+    key: "{{ item }}"
+  with_lines:
+    - cat ./roles/common/files/authorized_keys.cloudadmin.pub
+
+- name: Add Devops Users To The wheel Group
+  become: yes
+  user:
+    name: "{{ item.username }}"
+    groups: wheel
+    append: yes
+  with_items: "{{ devops_users }}"
+
+- name: Add sudo_users
+  become: yes
+  user:
+    name: "{{ item.username }}"
+    shell: /bin/bash
+  with_items: "{{ sudo_users }}"
+
+- name: Add Authorized Keys into sudo_users
+  become: yes
+  authorized_key:
+    user: "{{ item.username }}"
+    key: "{{ lookup('file', './files/authorized_keys.{{ item.username }}.pub')}}"
+  with_items: "{{ sudo_users }}"
+
+- name: Add sudo_users to wheel group
+  become: yes
+  user:
+    name: "{{ item.username }}"
+    groups: wheel
+    append: yes
+  with_items: "{{ sudo_users }}"
+
+- name: Add users
+  become: yes
+  user:
+    name: "{{ item.username }}"
+    shell: /bin/bash
+  with_items: "{{ users }}"
+
+- name: Add Authorized Keys into users
+  become: yes
+  authorized_key:
+    user: "{{ item.username }}"
+    key: "{{ lookup('file', './files/authorized_keys.{{ item.username }}.pub')}}"
+  with_items: "{{ users }}"
+
+# UNCOMMENT TO REMOVE USERS
+#- name: Remove users
+#  become: yes
+#  user:
+#    name: "{{ item.username }}"
+#    state: absent
+#    remove: yes
+#  with_items: "{{ removed_users }}"
+
+- name: Update Repositories
+  become: yes
+  apt:
+    update_cache: yes
